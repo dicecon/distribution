@@ -62,6 +62,9 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 	if config.CacheWriteTimeout != nil && *config.CacheWriteTimeout > 0 {
 		cacheWriteTimeout = *config.CacheWriteTimeout
 	}
+	if config.AllowOffOriginAuth {
+		dcontext.GetLogger(ctx).Warn("proxy.allowofforiginauth is enabled; Bearer authentication requests may be sent to realms outside the upstream registry's trust boundary")
+	}
 
 	if ttl != nil {
 		s = scheduler.New(ctx, driver, "/scheduler-state.json")
@@ -128,7 +131,7 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 			cs, err := configureExecAuth(*config.Exec)
 			return cs, cs, err
 		default:
-			return configureAuth(config.Username, config.Password, config.RemoteURL)
+			return configureAuth(config.Username, config.Password, config.RemoteURL, config.AllowOffOriginAuth)
 		}
 	}()
 	if err != nil {
@@ -142,9 +145,10 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		cacheWriteTimeout: cacheWriteTimeout,
 		remoteURL:         *remoteURL,
 		authChallenger: &remoteAuthChallenger{
-			remoteURL: *remoteURL,
-			cm:        challenge.NewSimpleManager(),
-			cs:        cs,
+			remoteURL:          *remoteURL,
+			cm:                 challenge.NewSimpleManager(),
+			cs:                 cs,
+			allowOffOriginAuth: config.AllowOffOriginAuth,
 		},
 		basicAuth: b,
 	}, nil
@@ -255,8 +259,9 @@ type authChallenger interface {
 type remoteAuthChallenger struct {
 	remoteURL url.URL
 	sync.Mutex
-	cm challenge.Manager
-	cs auth.CredentialStore
+	cm                 challenge.Manager
+	cs                 auth.CredentialStore
+	allowOffOriginAuth bool
 }
 
 func (r *remoteAuthChallenger) credentialStore() auth.CredentialStore {
@@ -265,7 +270,7 @@ func (r *remoteAuthChallenger) credentialStore() auth.CredentialStore {
 
 func (r *remoteAuthChallenger) challengeManager() challenge.Manager {
 	return challenge.NewFilteringManager(r.cm, func(c challenge.Challenge) bool {
-		return !strings.EqualFold(c.Scheme, "bearer") || realmAllowed(&r.remoteURL, c.Parameters["realm"])
+		return !strings.EqualFold(c.Scheme, "bearer") || r.allowOffOriginAuth || realmAllowed(&r.remoteURL, c.Parameters["realm"])
 	})
 }
 

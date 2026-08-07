@@ -240,6 +240,19 @@ func (suite *ConfigSuite) TestParseSimple() {
 	suite.Require().Equal(suite.expectedConfig, config)
 }
 
+func (suite *ConfigSuite) TestParseProxyAllowOffOriginAuth() {
+	configYaml := configYamlV0_1 + `
+proxy:
+  remoteurl: http://registry.example.test:5000
+  allowofforiginauth: true
+`
+
+	config, err := Parse(bytes.NewReader([]byte(configYaml)))
+	suite.Require().NoError(err)
+	suite.Require().Equal("http://registry.example.test:5000", config.Proxy.RemoteURL)
+	suite.Require().True(config.Proxy.AllowOffOriginAuth)
+}
+
 // TestParseInmemory validates that configuration yaml with storage provided as
 // a string can be parsed into a Configuration struct with no storage parameters
 func (suite *ConfigSuite) TestParseInmemory() {

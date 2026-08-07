@@ -698,6 +698,11 @@ type Proxy struct {
 	// RemoteURL is the URL of the remote registry
 	RemoteURL string `yaml:"remoteurl"`
 
+	// AllowOffOriginAuth allows the proxy to follow Bearer authentication realms
+	// outside the remote registry's trust boundary. This is disabled by default
+	// because credentials may be sent to the advertised authentication realm.
+	AllowOffOriginAuth bool `yaml:"allowofforiginauth,omitempty"`
+
 	// Username of the hub user
 	Username string `yaml:"username"`
 

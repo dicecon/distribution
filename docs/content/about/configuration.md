@@ -1268,6 +1268,7 @@ is unsupported.
 |-----------|----------|-------------------------------------------------------|
 | `remoteurl`| yes     | The URL for the repository on Docker Hub.             |
 | `ttl`      | no      | Expire proxy cache configured in "storage" after this time. Cache 168h(7 days) by default, set to 0 to disable cache expiration, The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| `allowofforiginauth` | no | Allow Bearer authentication realms outside the remote registry's trust boundary. Defaults to `false`. |
 
 To enable pulling private repositories (e.g. `batman/robin`), specify one of the
 following authentication methods for the pull-through cache to authenticate with
@@ -1289,6 +1290,23 @@ to retrieve the credentials to authenticate with the upstream registry.
 | `command` | yes      | The command to execute.                               |
 | `lifetime`| no       | The expiry period of the credentials. The credentials returned by the command is reused through the configured lifetime, then the command will be re-executed to retrieve new credentials. If set to zero, the command will be executed for every request. If not set, the command will only be executed once. |
 
+### `allowofforiginauth`
+
+By default, the proxy only follows Bearer authentication realms on the same
+authority as the remote registry or, for non-literal hostnames, within the same
+registrable domain. If a trusted upstream advertises an authentication realm
+outside that boundary, this validation can be disabled:
+
+```yaml
+proxy:
+  remoteurl: http://10.10.199.65:5000
+  allowofforiginauth: true
+```
+
+> **Warning**: Enabling this option trusts the upstream registry to select the
+> Bearer authentication realm. Authentication requests, including configured
+> credentials, may be sent to any realm advertised by the upstream. Only enable
+> it when the upstream registry and its redirects are trusted.
 
 > **Note**: These private repositories are stored in the proxy cache's storage.
 > Take appropriate measures to protect access to the proxy cache.
